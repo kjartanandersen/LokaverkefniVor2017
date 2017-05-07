@@ -1,2 +1,5 @@
-# LokaverkefniVor2017
-Lokaverkefni fyrir vorönn 2017
+# Lokaverkefni Fyrir Vorönn 2017
+
+## WIN3B
+Inniheldur Powershell skipanir fyrir Windows Server
+
