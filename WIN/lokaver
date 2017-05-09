@@ -26,6 +26,33 @@ New-ADGroup -Name "Allir" -GroupScope Global -Path "ou=Notendur,dc=kjartan,dc=lo
 #Import csv
 $notendur = Import-Csv .\lokaverk_notendur_u.csv -Delimiter ";"
 
+function SkodaIslenska {
+    $ideft = ""
+    foreach ($a in $idname.ToCharArray()) {
+            $b = @{}
+            $b.Add("á","a")
+            $b.Add("é","e")
+            $b.Add("í","i")
+            $b.Add("ó","o")
+            $b.Add("ú","u")
+            $b.Add("ý","y")
+            $b.Add("æ","ae")
+            $b.Add("ö","o")
+            $b.Add("ð","d")
+            $b.Add("þ","th")
+
+            if ($b.ContainsKey($a.ToString())) {
+                $ideft += $b[$a.ToString()]
+            }
+            else {
+                $ideft += $a
+            }
+        }
+        return $ideft
+
+}
+
+
 foreach ($n in $notendur)
 {
     $deild = $n.Deild
@@ -67,7 +94,7 @@ foreach ($n in $notendur)
        $idcuruser = $a.SamAccountName
        if ($idcuruser.Substring(0,3) -ne $idnameeft ) {
             $idnameeft = $idnameeft + "1"
-            New-ADUser -Name $nafn -Path ("ou=" + $deild + ",ou=" + $skoli + ",ou=Notendur,dc=kjartan,dc=local") -DisplayName $nafn -SamAccountName $idnameeft -UserPrincipalName ($idnameeft + "@kjartan.local") -Department $deild -Company $skoli -Division $skoli -AccountPassword (ConvertTo-SecureString -AsPlainText "pass.123" -Force) -Enabled $true
+            New-ADUser -Name $nafn  -Path ("ou=" + $deild + ",ou=" + $skoli + ",ou=Notendur,dc=kjartan,dc=local") -DisplayName $nafn -SamAccountName $idnameeft -UserPrincipalName ($idnameeft + "@kjartan.local") -Department $deild -Company $skoli -Division $skoli -AccountPassword (ConvertTo-SecureString -AsPlainText "pass.123" -Force) -Enabled $true
 
        }
        else {
@@ -79,51 +106,21 @@ foreach ($n in $notendur)
                 if ($b.SamAccountName.Substring(0,3) -eq $idnameeft) {
                     $arr.Add([int]$num)
                 }
-                
-
-
             }
-
-
+            $maxnum = (($arr | Measure-Object -Maximum).Count) + 1
+            $idnameeft = $idnameeft + $maxnum
+            New-ADUser -Name $nafn -Path ("ou=" + $deild + ",ou=" + $skoli + ",ou=Notendur,dc=kjartan,dc=local") -DisplayName $nafn -SamAccountName $idnameeft -UserPrincipalName ($idnameeft + "@kjartan.local") -Department $deild -Company $skoli -Division $skoli -AccountPassword (ConvertTo-SecureString -AsPlainText "pass.123" -Force) -Enabled $true
        }
-       
-        
     }
-
-
  }
 
- function SkodaIslenska {
-    $ideft = ""
-    foreach ($a in $idname.ToCharArray()) {
-            $b = @{}
-            $b.Add("á","a")
-            $b.Add("é","e")
-            $b.Add("í","i")
-            $b.Add("ó","o")
-            $b.Add("ú","u")
-            $b.Add("ý","y")
-            $b.Add("æ","ae")
-            $b.Add("ö","o")
-            $b.Add("ð","d")
-            $b.Add("þ","th")
-
-            if ($b.ContainsKey($a.ToString())) {
-                $ideft += $b[$a.ToString()]
-            }
-            else {
-                $ideft += $a
-            }
-        }
-        return $ideft
-
-}
+ 
 
 
 #test
 foreach ($n in $notendur){
-    
-
-
-
+ }
+ foreach ($a in $users) {
+ }
+ foreach ($b in $users){
  }
