@@ -19,6 +19,20 @@ Add-DhcpServerInDC -DnsName WIN3B-06.kjartan.local
 #Computer
 Add-Computer -ComputerName "WIN3B-w81-06" -LocalCredential WIN3B-w81-06\Administrator -DomainName kjartan.local -Credential kjartan\Administrator -Restart -Force
 
+#DNS Server
+
+Add-DnsServerPrimaryZone -Name "kjartan.is" -ReplicationScope Domain
+Add-DnsServerResourceRecordA -ZoneName "kjartan.is" -Name "www" -IPv4Address "10.10.0.1"
+Add-DnsServerResourceRecordA -ZoneName "kjartan.is" -Name "." -IPv4Address "10.10.0.1"
+
+#Web
+Install-WindowsFeature web-server -IncludeManagementTools
+New-Item "C:\inetpub\wwwroot\www.kjartan.is" -ItemType Directory
+New-Item "C:\inetpub\wwwroot\www.kjartan.is\index.html" -ItemType File -Value "www.bbp.is"
+New-Website -Name "www.kjartan.is" -HostHeader "www.kjartan.is" -PhysicalPath "C:\inetpub\wwwroot\www.kjartan.is\"
+New-WebBinding -Name "www.kjartan.is" -HostHeader "kjartan.is" 
+
+
 #Búa til OU
 New-ADOrganizationalUnit -Name "Notendur" -ProtectedFromAccidentalDeletion $false
 New-ADGroup -Name "Allir" -GroupScope Global -Path "ou=Notendur,dc=kjartan,dc=local"
@@ -36,10 +50,10 @@ function SkodaIslenska {
             $b.Add("ó","o")
             $b.Add("ú","u")
             $b.Add("ý","y")
-            $b.Add("æ","ae")
+            $b.Add("æ","a")
             $b.Add("ö","o")
             $b.Add("ð","d")
-            $b.Add("þ","th")
+            $b.Add("þ","t")
 
             if ($b.ContainsKey($a.ToString())) {
                 $ideft += $b[$a.ToString()]
@@ -87,34 +101,48 @@ foreach ($n in $notendur)
     $nafn = $n.Nafn
     $idname = ((($nafn).ToLower()).Split(" ")[0]).Substring(0,2) + ((($nafn).ToLower()).Split(" ")[-1]).Substring(0,1)
     $idnameeft = SkodaIslenska
-    $users = Get-ADUser -Filter *
+    
     
 
-    foreach ($a in $users) {
-       $idcuruser = $a.SamAccountName
-       if ($idcuruser.Substring(0,3) -ne $idnameeft ) {
-            $idnameeft = $idnameeft + "1"
-            New-ADUser -Name $nafn  -Path ("ou=" + $deild + ",ou=" + $skoli + ",ou=Notendur,dc=kjartan,dc=local") -DisplayName $nafn -SamAccountName $idnameeft -UserPrincipalName ($idnameeft + "@kjartan.local") -Department $deild -Company $skoli -Division $skoli -AccountPassword (ConvertTo-SecureString -AsPlainText "pass.123" -Force) -Enabled $true
+    $users = Get-ADUser -Filter *
+   
 
-       }
-       else {
-            foreach ($b in $users)
-            {
-                $arr = @()
-                $num = $b.SamAccountName.Substring(3,$b.SamAccountName.Length - 3)
 
-                if ($b.SamAccountName.Substring(0,3) -eq $idnameeft) {
-                    $arr.Add([int]$num)
-                }
-            }
-            $maxnum = (($arr | Measure-Object -Maximum).Count) + 1
-            $idnameeft = $idnameeft + $maxnum
-            New-ADUser -Name $nafn -Path ("ou=" + $deild + ",ou=" + $skoli + ",ou=Notendur,dc=kjartan,dc=local") -DisplayName $nafn -SamAccountName $idnameeft -UserPrincipalName ($idnameeft + "@kjartan.local") -Department $deild -Company $skoli -Division $skoli -AccountPassword (ConvertTo-SecureString -AsPlainText "pass.123" -Force) -Enabled $true
-       }
+    
+    foreach ($b in $users)
+    {
+        $arr = @()
+        $num = $b.SamAccountName.Substring(3,$b.SamAccountName.Length - 3)
+
+        if ($b.SamAccountName.Substring(0,3) -eq $idnameeft) {
+            $num = [int]$num
+            $arr += $num
+        }
     }
- }
+    $maxnum = (($arr | Measure-Object -Maximum).Count) + 1
+    $idnameeft = $idnameeft + $maxnum
 
+    if ($deild -eq "")
+    {
+        New-ADUser -Name $nafn -Surname $nafn.Split(" ")[-1] -GivenName $nafn.Split(" ")[0] -HomeDirectory "\\WIN3B-06\Home$" -HomeDrive "H:"  -Path ("ou=" + $skoli + ",ou=Notendur,dc=kjartan,dc=local") -DisplayName $nafn -SamAccountName $idnameeft -UserPrincipalName ($idnameeft + "@kjartan.local") -Department $deild -Company $skoli -Division $skoli -AccountPassword (ConvertTo-SecureString -AsPlainText "pass.123" -Force) -Enabled $true
+    }
+    else {
+        New-ADUser -Name $nafn -Surname $nafn.Split(" ")[-1] -GivenName $nafn.Split(" ")[0] -HomeDirectory "\\WIN3B-06\Home$" -HomeDrive "H:"  -Path ("ou=" + $deild + ",ou=" + $skoli + ",ou=Notendur,dc=kjartan,dc=local") -DisplayName $nafn -SamAccountName $idnameeft -UserPrincipalName ($idnameeft + "@kjartan.local") -Department $deild -Company $skoli -Division $skoli -AccountPassword (ConvertTo-SecureString -AsPlainText "pass.123" -Force) -Enabled $true
+    }
+    
+}
+    
  
+
+new-item C:\WIN3B\sameign -ItemType Directory
+New-SmbShare -Name "Home$" -Path C:\WIN3B\sameign -FullAccess kjartan\Allir, administrators
+
+$rettindi = Get-Acl -Path C:\WIN3B\sameign
+$nyrettindi = New-Object System.Security.AccessControl.FileSystemAccessRule("win3b\Allir","Modify","Allow")
+$rettindi.AddAccessRule($nyrettindi)
+Set-Acl -Path C:\WIN3B\sameign $rettindi
+
+
 
 
 #test
