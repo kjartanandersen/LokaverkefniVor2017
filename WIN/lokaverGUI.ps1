@@ -7,83 +7,55 @@ $notendur = Import-Csv .\lokaverk_notendur_u.csv -Delimiter ";"
 function SkraNyanNotanda {
     $notnafn = $skranotnafn.Text
     $namefyr = ($notnafn).ToLower()
-    $ideft = ""
-    $idEft1 = ""
-    $ideftfin = ""
+    $idnameeft = SkodaIslenska
     $notvef = $skranotvefnafn.Text
     $notdeild = $skranotdrop.Text
+    $notskoli = $skranotskolidrop.Text
+    $idname = ((($notnafn).ToLower()).Split(" ")[0]).Substring(0,2) + ((($notnafn).ToLower()).Split(" ")[-1]).Substring(0,1)
 
     #Búa til User
     if ((Get-ADUser -Filter {name -like $notnafn}).Name -ne $notnafn ) {
-        foreach ($a in $namefyr.ToCharArray()) {
-            $b = @{}
-            $b.Add(" ",".")
+        
+        $users = Get-ADUser -Filter *
+        $arr = @()
+        foreach ($b in $users)
+        {
+        
+            $num = $b.SamAccountName.Substring(3,$b.SamAccountName.Length - 3)
 
-            if ($b.ContainsKey($a.ToString())) {
-                $ideft += $b[$a.ToString()]
-            }
-            else {
-                $ideft += $a
-            }
-        }
-
-        #Breyta íslenska stafi
-        foreach ($a in $ideft.ToCharArray()) {
-            $b = @{}
-            $b.Add("á","a")
-            $b.Add("é","e")
-            $b.Add("í","i")
-            $b.Add("ó","o")
-            $b.Add("ú","u")
-            $b.Add("ý","y")
-            $b.Add("æ","ae")
-            $b.Add("ö","o")
-            $b.Add("ð","d")
-            $b.Add("þ","th")
-
-            if ($b.ContainsKey($a.ToString())) {
-                $idEft1 += $b[$a.ToString()]
-            }
-            else {
-                $idEft1 += $a
+            if ($b.SamAccountName.Substring(0,3) -eq $idnameeft) {
+                $num = [int]$num
+                $arr += $num
+            
             }
         }
-        #Skoða ef nafn hefur fleiri stafi en 20
-        if ((($idEft1.ToCharArray()).Length) -gt 20) {
-            $ideftfin = $idEft1.Substring(0,20)
-        }
-        else {$ideftfin = $idEft1}
 
-        #Búa til fornafn og eftirnafn
-        $chnum = ((($notnafn)).Split(" ")).Length - 1
-        $fornafn = ""
-        $eftirnafn = $notnafn.Split(" ")[-1]
-
-        #Búa til fornafn
-        for ($i = 0; $i -lt $chnum; $i++ ) {
-            $fornafn += ((($notnafn)).Split(" "))[$i]
+        write-host $idnameeft
+        if ($notskoli -eq "" -and $notdeild -eq "") {
+            [System.Windows.MessageBox]::Show('Verður að Skrá Skóla og deild')
         }
-    
-        $email = ($ideftfin + "@bbp-kjartan.local")
-        $pathtouser = ("ou=" +$notdeild + ",ou=Starfsmenn,dc=bbp-kjartan,dc=local")
-        New-ADUser -Name $notnafn -DisplayName $notnafn -SamAccountName $ideftfin -UserPrincipalName $email -GivenName $fornafn -Surname $eftirnafn -Path $pathtouser -EmailAddress $email -Description $notdeild -Department $notdeild -Title $notdeild -HomeDrive "H:" -HomeDirectory "\\WIN3B-06\Home$\%UserName%" -AccountPassword (ConvertTo-SecureString -AsPlainText "pass.123" -Force) -Enabled $true
+        else {
+            New-ADUser -Verbose -Name $notnafn -Surname $notnafn.Split(" ")[-1] -GivenName $notnafn.Split(" ")[0] -HomeDrive "H:" -HomeDirectory "\\WIN3B-06\Home$\%UserName%"  -Path ("ou=" + $notdeild + ",ou=" + $notskoli + ",ou=Notendur,dc=kjartan,dc=local") -DisplayName $notnafn -SamAccountName $idnameeft -UserPrincipalName ($idnameeft + "@kjartan.local") -Department $deild -Company $skoli -Division $skoli -AccountPassword (ConvertTo-SecureString -AsPlainText "pass.123" -Force) -Enabled $true
+        }
+
+        
     }
 
     #Ef checkbox er checked Setja upp vefsíðu og vefsvæði
     if ($skranotcheck.Checked) {
-        if (((Get-DnsServerResourceRecord -ZoneName "bbp.is" -Name $notvef).HostName) -ne $notvef) {
-        Add-DnsServerResourceRecordA -ZoneName "bbp.is" -Name $notvef -IPv4Address "10.10.0.1"
+        if (((Get-DnsServerResourceRecord -ZoneName "kjartan.is" -Name $notvef).HostName) -ne $notvef) {
+        Add-DnsServerResourceRecordA -ZoneName "kjartan.is" -Name $notvef -IPv4Address "192.168.1.1"
         }
 
-        if ((Test-Path -Path ("C:\inetpub\wwwroot\www.bbp.is\" + $notdeild + "\" + $notvef)) -eq $false) {
-            New-Item ("C:\inetpub\wwwroot\www.bbp.is\" + $notdeild + "\" + $notvef) -ItemType Directory
-            if ((Test-Path -Path ("C:\inetpub\wwwroot\www.bbp.is\" + $notdeild +"\" + $notvef + "\index.html")) -eq $false) {
-                New-Item ("C:\inetpub\wwwroot\www.bbp.is\" + $notdeild +"\" + $notvef + "\index.html") -ItemType File -Value ($notvef + ".bbp.is")
+        if ((Test-Path -Path ("C:\inetpub\wwwroot\www.kjartan.is\" + $notdeild + "\" + $notvef)) -eq $false) {
+            New-Item ("C:\inetpub\wwwroot\www.kjartan.is\" + $notdeild + "\" + $notvef) -ItemType Directory
+            if ((Test-Path -Path ("C:\inetpub\wwwroot\www.kjartan.is\" + $notdeild +"\" + $notvef + "\index.html")) -eq $false) {
+                New-Item ("C:\inetpub\wwwroot\www.kjartan.is\" + $notdeild +"\" + $notvef + "\index.html") -ItemType File -Value ($notvef + ".bbp.is")
             }
         }
 
-        if (((Get-Website -Name ($notvef + ".bbp.is")).Name) -ne ($notvef + ".bbp.is")) {
-            New-Website -Name ($notvef + ".bbp.is") -HostHeader ($notvef + ".bbp.is") -PhysicalPath ("C:\inetpub\wwwroot\www.bbp.is\" + $notdeild + "\" + $notvef + "\")
+        if (((Get-Website -Name ($notvef + ".kjartan.is")).Name) -ne ($notvef + ".kjartan.is")) {
+            New-Website -Name ($notvef + ".kjartan.is") -HostHeader ($notvef + ".kjartan.is") -PhysicalPath ("C:\inetpub\wwwroot\www.kjartan.is\" + $notdeild + "\" + $notvef + "\")
         }
 
     }
